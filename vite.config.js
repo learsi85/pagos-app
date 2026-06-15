@@ -13,6 +13,7 @@ export default defineConfig({
       '/api': {
         // Apunta al backend en Apache (ajusta si tu ruta es diferente)
         target: 'https://acciontic.com.mx/pagos-app/backend/public',
+        //target: 'http://localhost/pagos-app/backend/public',
         changeOrigin: true,
         // Reescribe /api/... → /... (quita el prefijo /api)
         //rewrite: (path) => path.replace(/^\/api/, ''),
