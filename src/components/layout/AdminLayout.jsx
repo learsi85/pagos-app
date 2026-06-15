@@ -1,4 +1,5 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAdminStore } from '@/store/authStore';
 import { authAdmin } from '@/services/api';
 import toast from 'react-hot-toast';
@@ -14,6 +15,36 @@ const NAV = [
 export default function AdminLayout() {
   const { user, clearAuth } = useAdminStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Cerrar sidebar al navegar (móvil)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Inyectar media queries una sola vez
+  useEffect(() => {
+    if (document.getElementById('admin-layout-responsive')) return;
+    const style = document.createElement('style');
+    style.id = 'admin-layout-responsive';
+    style.textContent = `
+      @media (max-width: 768px) {
+        .admin-mobile-bar { display: flex !important; }
+        .admin-sidebar {
+          position: fixed !important;
+          top: 0; left: 0; bottom: 0;
+          transform: translateX(-100%);
+          box-shadow: 4px 0 24px rgba(0,0,0,0.2);
+        }
+        .admin-sidebar.open { transform: translateX(0); }
+        .admin-sidebar-close { display: block !important; }
+        
+        .admin-main { padding-top: 56px; }
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
 
   const handleLogout = async () => {
     try { await authAdmin.logout(); } catch (_) {}
@@ -24,11 +55,42 @@ export default function AdminLayout() {
 
   return (
     <div style={styles.shell}>
+      {/* Top bar móvil */}
+      <header className="admin-mobile-bar" style={styles.mobileBar}>
+        <button
+          style={styles.hamburger}
+          onClick={() => setSidebarOpen((v) => !v)}
+          aria-label="Abrir menú"
+        >
+          {sidebarOpen ? '✕' : '☰'}
+        </button>
+        <div style={styles.mobileBrand}>
+          <span style={styles.brandIcon}>💳</span>
+          <span style={styles.brandText}>PagosApp</span>
+        </div>
+        <div style={{ width: 40 }} />
+      </header>
+
+      {/* Overlay oscuro al abrir sidebar en móvil */}
+      <div
+        className="admin-overlay"
+        style={{ ...styles.overlay, display: sidebarOpen ? undefined : 'none' }}
+        onClick={() => setSidebarOpen(false)}
+      />
+
       {/* Sidebar */}
-      <aside style={styles.sidebar}>
+      <aside className={`admin-sidebar${sidebarOpen ? ' open' : ''}`} style={styles.sidebar}>
         <div style={styles.brand}>
           <span style={styles.brandIcon}>💳</span>
           <span style={styles.brandText}>PagosApp</span>
+          <button
+            className="admin-sidebar-close"
+            style={styles.closeBtn}
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Cerrar menú"
+          >
+            ✕
+          </button>
         </div>
 
         <nav style={styles.nav}>
@@ -54,7 +116,7 @@ export default function AdminLayout() {
             </div>
             <div>
               <div style={styles.userName}>{user?.nombre || 'Admin'}</div>
-              <div style={styles.userTenant}>{user?.tenant}</div>
+              <div style={styles.userTenant}>{user?.tenant_key}</div>
             </div>
           </div>
           <button onClick={handleLogout} style={styles.logoutBtn}>
@@ -64,12 +126,14 @@ export default function AdminLayout() {
       </aside>
 
       {/* Contenido */}
-      <main style={styles.main}>
+      <main className="admin-main" style={styles.main}>
         <Outlet />
       </main>
     </div>
   );
 }
+
+const SIDEBAR_WIDTH = 240;
 
 const styles = {
   shell: {
@@ -78,8 +142,42 @@ const styles = {
     fontFamily: "'Inter', 'Segoe UI', sans-serif",
     background: '#f4f6f9',
   },
+
+  mobileBar: {
+    display: 'none',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'fixed',
+    top: 0, left: 0, right: 0,
+    height: 56,
+    background: '#1a2035',
+    padding: '0 12px',
+    zIndex: 50,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+  },
+  hamburger: {
+    width: 40, height: 40,
+    border: 'none', background: 'transparent',
+    color: '#fff', fontSize: 22, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  mobileBrand: { display: 'flex', alignItems: 'center', gap: 8 },
+
+  overlay: {
+    position: 'fixed', inset: 0,
+    background: 'rgba(0,0,0,0.45)',
+    zIndex: 40,
+  },
+
+  closeBtn: {
+    display: 'none',
+    marginLeft: 'auto',
+    background: 'none', border: 'none',
+    color: 'rgba(255,255,255,0.7)', fontSize: 18, cursor: 'pointer',
+  },
+
   sidebar: {
-    width: 240,
+    width: SIDEBAR_WIDTH,
     minHeight: '100vh',
     background: '#1a2035',
     display: 'flex',
@@ -87,7 +185,11 @@ const styles = {
     position: 'sticky',
     top: 0,
     height: '100vh',
+    flexShrink: 0,
+    transition: 'transform 0.25s ease',
+    zIndex: 45,
   },
+
   brand: {
     display: 'flex',
     alignItems: 'center',
@@ -97,7 +199,7 @@ const styles = {
   },
   brandIcon: { fontSize: 24 },
   brandText: { color: '#fff', fontWeight: 700, fontSize: 18, letterSpacing: '-0.3px' },
-  nav: { flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4 },
+  nav: { flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto' },
   navLink: {
     display: 'flex', alignItems: 'center', gap: 10,
     padding: '10px 12px', borderRadius: 8,
@@ -131,5 +233,5 @@ const styles = {
     fontSize: 13, cursor: 'pointer',
     transition: 'background 0.15s',
   },
-  main: { flex: 1, overflow: 'auto' },
+  main: { flex: 1, overflow: 'auto', minWidth: 0 },
 };
