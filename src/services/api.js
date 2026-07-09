@@ -71,8 +71,10 @@ export const financiamientosApi = {
   update:   (id, data)      => api.put(`/admin/financiamientos/${id}`, data),
   plan:     (id)            => api.get(`/admin/financiamientos/${id}/plan`),
   // simular no necesita ID — el backend calcula sin persistir
-  simular:  (_id, data)     => api.post('/admin/financiamientos/simular', data),
+  simular:  (data)          => api.post('/admin/financiamientos/simular', data),
   pagos:    (id)            => api.get(`/admin/financiamientos/${id}/pagos`),
+  calcularMoratorio: (finId, planId) => api.get(`/admin/financiamientos/${finId}/moratorio/${planId}`),
+  cargos: (id)              => api.get(`/admin/financiamientos/${id}/cargos`),
 };
 
 export const pagosApi = {
