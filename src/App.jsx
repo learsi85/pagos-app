@@ -20,6 +20,9 @@ import Empresa              from '@/pages/admin/Empresa';
 
 // Páginas portal cliente
 import LoginCliente   from '@/pages/cliente/LoginCliente';
+import OlvidePassword from '@/pages/cliente/OlvidePassword';
+import ResetPassword  from '@/pages/cliente/ResetPassword';
+import CambiarPassword from '@/pages/cliente/CambiarPassword';
 import PrimerAcceso   from '@/pages/cliente/PrimerAcceso';
 import EstadoCuenta   from '@/pages/cliente/EstadoCuenta';
 import MisFinanciamientos   from '@/pages/cliente/MisFinanciamientos';
@@ -65,6 +68,8 @@ export default function App() {
         {/* ── Portal cliente ── */}
         <Route path="/portal/login"      element={<LoginCliente />} />
         <Route path="/portal/acceso"     element={<PrimerAcceso />} />
+        <Route path="/portal/reset-password" element={<ResetPassword />} />
+        <Route path="/portal/olvide-password" element={<OlvidePassword />} />
 
         <Route
           path="/portal"

@@ -30,6 +30,7 @@ export default function RegistrarPago() {
   const [loading,   setLoading]   = useState(true);
   const [moratorio, setMoratorio] = useState(null); // resultado del cálculo
   const [calMor,    setCalMor]    = useState(false); // cargando moratorio
+  const [cuotaActual, setCuotaActual] = useState(null); // cuota siguiente pendiente
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
@@ -51,7 +52,19 @@ export default function RegistrarPago() {
       metodosApi.list(),
     ]).then(([rf, rp, rm]) => {
       setFin(rf.data);
-      setPlan(rp.data.filter((p) => ['PENDIENTE','PARCIAL','VENCIDO'].includes(p.Status)));
+      //setPlan(rp.data.filter((p) => ['PENDIENTE','PARCIAL','VENCIDO'].includes(p.Status)));
+      const cuotas = rp.data.filter((p) => ['PENDIENTE', 'PARCIAL', 'VENCIDO'].includes(p.Status));
+
+      setPlan(cuotas);
+
+      if (cuotas.length > 0) {
+        const primera = cuotas[0];
+
+        setCuotaActual(primera);
+
+        setValue("plan_pago_id", String(primera.PlanPagoId));
+        setValue("monto", Number(primera.SaldoPendiente));
+      }
       setMetodos(rm.data);
     }).finally(() => setLoading(false));
   }, [id]);
@@ -59,8 +72,10 @@ export default function RegistrarPago() {
   // Al seleccionar cuota → pre-rellenar monto y calcular moratorio si aplica
   useEffect(() => {
     if (!planPagoId) { setMoratorio(null); return; }
-    const cuota = plan.find((p) => String(p.PlanPagoId) === String(planPagoId));
-    if (cuota) setValue('monto', cuota.SaldoPendiente);
+    //const cuota = plan.find((p) => String(p.PlanPagoId) === String(planPagoId));
+    if (cuotaActual) {
+      setValue("monto", cuotaActual.SaldoPendiente);
+    }
 
     // Si el financiamiento tiene moratorio activo, calcular
     if (fin?.MoratorioActivo && planPagoId) {
@@ -120,45 +135,35 @@ export default function RegistrarPago() {
           <form onSubmit={handleSubmit(onSubmit)}>
 
             {/* Selección de cuota */}
-            <Section title="Aplicar a cuota (opcional)">
-              <p style={s.hint}>
-                Selecciona una cuota para actualizar su saldo, o deja en blanco para un abono libre.
-              </p>
-              <div style={s.cuotaList}>
-                <label style={s.cuotaRow}>
-                  <input type="radio" {...register('plan_pago_id')} value="" style={{ marginRight: 8 }} />
-                  <span style={{ fontSize: 13, color: '#4a5568' }}>Abono libre</span>
-                </label>
-                {plan.map((p) => (
-                  <label key={p.PlanPagoId} style={{
-                    ...s.cuotaRow,
-                    borderColor: p.Status === 'VENCIDO' ? '#feb2b2' : '#e2e8f0',
-                    background: p.Status === 'VENCIDO' ? '#fff5f5' : '#fff',
-                  }}>
-                    <input
-                      type="radio"
-                      {...register('plan_pago_id')}
-                      value={String(p.PlanPagoId)}
-                      style={{ marginRight: 8 }}
-                    />
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Section title="Cuota a pagar">
+              {(() => {
+                const cuota = plan.find(
+                  p => String(p.PlanPagoId) === String(planPagoId)
+                );
+
+                if (!cuota) return null;
+
+                return (
+                  <div style={s.cuotaCard}>
+                    <div style={s.cuotaHeader}>
                       <div>
-                        <span style={{ fontSize: 13, fontWeight: 600 }}>Cuota #{p.NumeroPago}</span>
-                        {p.Status === 'VENCIDO' && (
-                          <span style={{ fontSize: 11, color: '#e53e3e', marginLeft: 8, fontWeight: 700 }}>⚠ VENCIDA</span>
-                        )}
-                        <div style={{ fontSize: 12, color: '#718096' }}>Vence: {fmt.date(p.FechaVencimiento)}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        {statusBadge(p.Status)}
-                        <div style={{ fontSize: 13, color: '#e53e3e', fontWeight: 700, marginTop: 2 }}>
-                          Saldo: {fmt.money(p.SaldoPendiente)}
+                        <div style={s.cuotaTitulo}>
+                          Cuota #{cuota.NumeroPago}
+                        </div>
+
+                        <div style={s.cuotaFecha}>
+                          Vence: {fmt.date(cuota.FechaVencimiento)}
                         </div>
                       </div>
+                      {statusBadge(cuota.Status)}
                     </div>
-                  </label>
-                ))}
-              </div>
+
+                    <div style={s.cuotaMonto}>
+                      {fmt.money(cuota.SaldoPendiente)}
+                    </div>
+                  </div>
+                );
+              })()}
             </Section>
 
             {/* Moratorio */}
@@ -208,6 +213,29 @@ export default function RegistrarPago() {
                 ) : null}
               </Section>
             )}
+
+            {/* Resumen pago */}
+            <Section title="Resumen del cobro">
+              <div style={s.resumenBox}>
+                <RI
+                  label="Monto de la cuota"
+                  value={fmt.money(watch("monto"))}
+                />
+                {aplicarMor && (
+                  <RI
+                    label="Recargo"
+                    value={fmt.money(montoMoratorio)}
+                    color="#e53e3e"
+                  />
+                )}
+
+                <div style={s.totalOperacion}>
+                  <span>Total a cobrar</span>
+                  <strong>{fmt.money(totalConMor)}</strong>
+                </div>
+              </div>
+
+            </Section>
 
             {/* Datos del pago */}
             <Section title="Datos del pago">
@@ -288,21 +316,7 @@ export default function RegistrarPago() {
           </div>
 
           {/* Total a cobrar en esta operación */}
-          {totalConMor > 0 && (
-            <div style={{ ...s.sideCard, background: '#1a2035', border: 'none' }}>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-                Total a cobrar en esta operación
-              </div>
-              <div style={{ fontSize: 26, fontWeight: 700, color: '#fff' }}>
-                {fmt.money(totalConMor)}
-              </div>
-              {aplicarMor && montoMoratorio > 0 && (
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
-                  Pago: {fmt.money(watch('monto'))} + Recargo: {fmt.money(montoMoratorio)}
-                </div>
-              )}
-            </div>
-          )}
+          
         </div>
       </div>
     </Wrap>
@@ -363,4 +377,11 @@ const s = {
   formActions: { display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 8, borderTop: '1px solid #f0f0f0' },
   btnPri:      { padding: '10px 24px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   btnSec:      { padding: '10px 20px', background: '#fff', color: '#4a5568', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, cursor: 'pointer' },
+  cuotaCard:   { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: 18},
+  cuotaHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 15},
+  cuotaTitulo: { fontWeight: 700, fontSize: 15, color: "#1a202c"},
+  cuotaFecha:  { fontSize: 13, color: "#718096", marginTop: 4},
+  cuotaMonto:  { textAlign: "center", fontSize: 32, fontWeight: 700, color: "#2b6cb0"},
+  resumenBox:  { background: "#f7fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16},
+  totalOperacion: { marginTop: 14, paddingTop: 14, borderTop: "2px solid #cbd5e0", display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 700, fontSize: 18, color: "#1a202c"},
 };

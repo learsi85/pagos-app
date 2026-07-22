@@ -102,9 +102,12 @@ export const dashboardApi = {
 
 // ── Servicios Portal Cliente ──────────────────────────────────
 export const authCliente = {
-  login:       (data) => api.post('/auth/cliente/login', data),
-  primerAcceso:(data) => api.post('/auth/cliente/primer-acceso', data),
-  cambiarPass: (data) => api.post('/auth/cliente/cambiar-password', data),
+  login:          (data)         => api.post('/auth/cliente/login', data),
+  primerAcceso:   (data)         => api.post('/auth/cliente/primer-acceso', data),
+  solicitarReset: (data)         => api.post('/auth/cliente/solicitar-reset', data),
+  confirmarReset: (data)         => api.post('/auth/cliente/confirmar-reset', data),
+  validarToken:   (params)       => api.get('/auth/cliente/validar-token', { params }),
+  cambiarPass:    (data)         => api.post('/auth/cliente/cambiar-password', data),
 };
 
 export const portalApi = {
