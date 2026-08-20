@@ -8,21 +8,21 @@ import { clientesApi, productosApi, financiamientosApi } from '@/services/api';
 import { fmt } from '@/utils/format';
 
 const schema = z.object({
-  cliente_id:       z.coerce.number().positive('Selecciona un cliente'),
-  producto_id:      z.coerce.number().positive('Selecciona un producto'),
-  precio_producto:  z.coerce.number().positive('Requerido'),
-  enganche:         z.coerce.number().min(0).default(0),
-  tipo_interes:     z.enum(['NINGUNO','PORCENTAJE','MONTO_FIJO']),
-  valor_interes:    z.coerce.number().min(0).default(0),
-  numero_pagos:     z.coerce.number().int().positive('Requerido'),
-  frecuencia_pago:  z.enum(['SEMANAL','QUINCENAL','MENSUAL']),
-  fecha_inicio:     z.string().min(1, 'Requerido'),
-  // Moratorio
-  moratorio_activo: z.boolean().default(false),
-  moratorio_tipo:   z.enum(['PORCENTAJE','MONTO_FIJO']).optional(),
-  moratorio_valor:  z.coerce.number().min(0).default(0),
-  moratorio_base:   z.enum(['CUOTA','SALDO_TOTAL']).optional(),
-  notas:            z.string().optional(),
+  cliente_id:        z.coerce.number().positive('Selecciona un cliente'),
+  producto_id:       z.coerce.number().positive('Selecciona un producto'),
+  precio_producto:   z.coerce.number().positive('Requerido'),
+  enganche:          z.coerce.number().min(0).default(0),
+  tipo_interes:      z.enum(['NINGUNO','PORCENTAJE','MONTO_FIJO']),
+  valor_interes:     z.coerce.number().min(0).default(0),
+  numero_pagos:      z.coerce.number().int().positive('Requerido'),
+  frecuencia_pago:   z.enum(['SEMANAL','QUINCENAL','MENSUAL']),
+  fecha_inicio:      z.string().min(1, 'Requerido'),
+  moratorio_activo:  z.boolean().default(false),
+  moratorio_tipo:    z.enum(['PORCENTAJE','MONTO_FIJO']).optional(),
+  moratorio_valor:   z.coerce.number().min(0).default(0),
+  moratorio_base:    z.enum(['CUOTA','SALDO_TOTAL']).optional(),
+  excedente_destino: z.enum(['SIGUIENTE_CUOTA','ABONO_CAPITAL']).default('SIGUIENTE_CUOTA'),
+  notas:             z.string().optional(),
 });
 
 export default function FinanciamientoNuevo() {
@@ -37,16 +37,17 @@ export default function FinanciamientoNuevo() {
   const { register, handleSubmit, setValue, control, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      tipo_interes:    'NINGUNO',
-      frecuencia_pago: 'MENSUAL',
-      enganche:        0,
-      valor_interes:   0,
-      moratorio_activo: false,
-      moratorio_tipo:  'PORCENTAJE',
-      moratorio_valor: 0,
-      moratorio_base:  'CUOTA',
-      fecha_inicio:    new Date().toISOString().slice(0, 10),
-      cliente_id:      params.get('cliente_id') || '',
+      tipo_interes:      'NINGUNO',
+      frecuencia_pago:   'MENSUAL',
+      enganche:          0,
+      valor_interes:     0,
+      moratorio_activo:  false,
+      moratorio_tipo:    'PORCENTAJE',
+      moratorio_valor:   0,
+      moratorio_base:    'CUOTA',
+      excedente_destino: 'SIGUIENTE_CUOTA',
+      fecha_inicio:      new Date().toISOString().slice(0, 10),
+      cliente_id:        params.get('cliente_id') || '',
     },
   });
 
@@ -126,7 +127,7 @@ export default function FinanciamientoNuevo() {
                 </select>
               </F>
               <div style={s.twoCol}>
-                <F label="Precio del producto (MXN) *" error={errors.precio_producto?.message}>
+                <F label="Precio (MXN) *" error={errors.precio_producto?.message}>
                   <input {...register('precio_producto')} type="number" step="0.01" style={s.input} />
                 </F>
                 <F label="Enganche (MXN)" error={errors.enganche?.message}>
@@ -136,7 +137,7 @@ export default function FinanciamientoNuevo() {
             </Section>
 
             <Section title="2. Interés">
-              <F label="Tipo de interés" error={errors.tipo_interes?.message}>
+              <F label="Tipo de interés">
                 <select {...register('tipo_interes')} style={s.input}>
                   <option value="NINGUNO">Sin interés</option>
                   <option value="PORCENTAJE">Por porcentaje (%)</option>
@@ -144,10 +145,8 @@ export default function FinanciamientoNuevo() {
                 </select>
               </F>
               {tipoInteres !== 'NINGUNO' && (
-                <F
-                  label={tipoInteres === 'PORCENTAJE' ? 'Porcentaje de interés' : 'Monto de interés (MXN)'}
-                  error={errors.valor_interes?.message}
-                >
+                <F label={tipoInteres === 'PORCENTAJE' ? 'Porcentaje' : 'Monto de interés (MXN)'}
+                   error={errors.valor_interes?.message}>
                   <input {...register('valor_interes')} type="number" step="0.01" min="0" style={s.input} />
                 </F>
               )}
@@ -158,7 +157,7 @@ export default function FinanciamientoNuevo() {
                 <F label="Núm. de pagos *" error={errors.numero_pagos?.message}>
                   <input {...register('numero_pagos')} type="number" min="1" style={s.input} />
                 </F>
-                <F label="Frecuencia" error={errors.frecuencia_pago?.message}>
+                <F label="Frecuencia">
                   <select {...register('frecuencia_pago')} style={s.input}>
                     <option value="MENSUAL">Mensual</option>
                     <option value="QUINCENAL">Quincenal</option>
@@ -171,74 +170,84 @@ export default function FinanciamientoNuevo() {
               </F>
             </Section>
 
-            {/* ── Sección moratorio ── */}
             <Section title="4. Interés moratorio">
               <label style={s.checkRow}>
                 <input {...register('moratorio_activo')} type="checkbox" style={{ marginRight: 8 }} />
-                <span style={{ fontSize: 14, color: '#2d3748' }}>
-                  Aplicar recargo por pago tardío
-                </span>
+                <span style={{ fontSize: 14, color: '#2d3748' }}>Aplicar recargo por pago tardío</span>
               </label>
 
               {moratorioActivo && (
                 <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <F label="Tipo de recargo" error={errors.moratorio_tipo?.message}>
+                  <F label="Tipo de recargo">
                     <select {...register('moratorio_tipo')} style={s.input}>
                       <option value="PORCENTAJE">Porcentaje (%)</option>
                       <option value="MONTO_FIJO">Monto fijo (MXN)</option>
                     </select>
                   </F>
-
-                  <F
-                    label={moratorioTipo === 'PORCENTAJE' ? 'Porcentaje de recargo' : 'Monto fijo de recargo (MXN)'}
-                    error={errors.moratorio_valor?.message}
-                  >
-                    <input
-                      {...register('moratorio_valor')}
-                      type="number" step="0.01" min="0"
-                      style={s.input}
-                      placeholder={moratorioTipo === 'PORCENTAJE' ? 'ej. 5 (= 5%)' : 'ej. 150'}
-                    />
+                  <F label={moratorioTipo === 'PORCENTAJE' ? 'Porcentaje de recargo' : 'Monto fijo (MXN)'}
+                     error={errors.moratorio_valor?.message}>
+                    <input {...register('moratorio_valor')} type="number" step="0.01" min="0"
+                      style={s.input} placeholder={moratorioTipo === 'PORCENTAJE' ? 'ej. 5 (= 5%)' : 'ej. 150'} />
                   </F>
-
                   {moratorioTipo === 'PORCENTAJE' && (
-                    <F label="Calcular el % sobre" error={errors.moratorio_base?.message}>
+                    <F label="Calcular el % sobre">
                       <select {...register('moratorio_base')} style={s.input}>
                         <option value="CUOTA">Saldo pendiente de la cuota vencida</option>
                         <option value="SALDO_TOTAL">Saldo total pendiente del financiamiento</option>
                       </select>
                     </F>
                   )}
-
-                  <div style={s.moratorioNote}>
-                    ℹ️ El recargo se calcula automáticamente al vencer la cuota, pero el admin decide
-                    si cobrarlo al momento de registrar el pago.
+                  <div style={s.infoNote}>
+                    ℹ️ El recargo se calcula automáticamente usando la fecha de pago que capture el admin.
+                    El admin decide si cobrarlo al registrar el pago.
                   </div>
                 </div>
               )}
             </Section>
 
-            <Section title="5. Notas">
+            {/* ── Sección 5: Destino del excedente ── */}
+            <Section title="5. Destino del excedente">
+              <p style={s.hint}>
+                Si el cliente paga más del saldo de su cuota, ¿a dónde va el excedente?
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={s.radioRow}>
+                  <input {...register('excedente_destino')} type="radio"
+                    value="SIGUIENTE_CUOTA" style={{ marginRight: 10 }} />
+                  <div>
+                    <div style={s.radioTitle}>Abono a siguiente cuota</div>
+                    <div style={s.radioDesc}>
+                      El excedente se aplica automáticamente al saldo de la próxima cuota pendiente.
+                    </div>
+                  </div>
+                </label>
+                <label style={s.radioRow}>
+                  <input {...register('excedente_destino')} type="radio"
+                    value="ABONO_CAPITAL" style={{ marginRight: 10 }} />
+                  <div>
+                    <div style={s.radioTitle}>Abono directo a capital</div>
+                    <div style={s.radioDesc}>
+                      El excedente reduce el saldo total del financiamiento sin aplicarse a ninguna cuota
+                      específica. El admin puede redefinirlo cuota por cuota al registrar cada pago.
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </Section>
+
+            <Section title="6. Notas">
               <F label="Notas (opcional)">
                 <textarea {...register('notas')} style={{ ...s.input, minHeight: 60, resize: 'vertical' }} />
               </F>
             </Section>
 
             <div style={s.formActions}>
-              <button
-                type="button"
-                style={s.btnSec}
-                onClick={handleSubmit(simular)}
-                disabled={simulating}
-              >
+              <button type="button" style={s.btnSec} onClick={handleSubmit(simular)} disabled={simulating}>
                 {simulating ? 'Calculando…' : '🔢 Simular corrida'}
               </button>
-              <button
-                form="fin-form"
-                type="submit"
+              <button form="fin-form" type="submit"
                 style={{ ...s.btnPri, opacity: corrida ? 1 : 0.5 }}
-                disabled={saving || !corrida}
-              >
+                disabled={saving || !corrida}>
                 {saving ? 'Guardando…' : '✅ Guardar financiamiento'}
               </button>
             </div>
@@ -251,26 +260,25 @@ export default function FinanciamientoNuevo() {
             <div style={s.corridaEmpty}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
               <p style={{ color: '#718096', margin: 0, fontSize: 14 }}>
-                Completa el formulario y presiona<br /><strong>Simular corrida</strong>
+                Completa el formulario y presiona <strong>Simular corrida</strong>
               </p>
             </div>
           ) : (
             <>
-              {/* Resumen */}
               <div style={s.corridaCard}>
                 <h3 style={s.corridaTitle}>Resumen</h3>
-                <RI label="Precio producto"   value={fmt.money(corrida.precio_producto)} />
-                <RI label="Enganche"           value={fmt.money(corrida.enganche)} />
-                <RI label="Monto financiado"   value={fmt.money(corrida.monto_financiado)} />
-                <RI label="Interés"            value={fmt.money(corrida.monto_interes)} />
-                <RI label="Total a pagar"      value={fmt.money(corrida.monto_total_pagar)} highlight />
-                <RI label="Pagos"              value={`${corrida.numero_pagos} × ${fmt.money(corrida.monto_por_pago)}`} />
+                <RI label="Precio producto"  value={fmt.money(corrida.precio_producto)} />
+                <RI label="Enganche"          value={fmt.money(corrida.enganche)} />
+                <RI label="Monto financiado"  value={fmt.money(corrida.monto_financiado)} />
+                <RI label="Interés"           value={fmt.money(corrida.monto_interes)} />
+                <RI label="Total a pagar"     value={fmt.money(corrida.monto_total_pagar)} highlight />
+                <RI label="Pagos"
+                  value={`${corrida.numero_pagos} × ${fmt.money(corrida.monto_por_pago)}`} />
               </div>
 
-              {/* Tabla de corrida con saldo restante */}
               <div style={s.corridaCard}>
                 <h3 style={s.corridaTitle}>Corrida de pagos</h3>
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ overflowX: 'auto', maxHeight: 340, overflowY: 'auto' }}>
                   <table style={s.table}>
                     <thead>
                       <tr>
@@ -282,18 +290,17 @@ export default function FinanciamientoNuevo() {
                     </thead>
                     <tbody>
                       {corrida.plan.map((p) => (
-                        <tr
-                          key={p.numero_pago}
+                        <tr key={p.numero_pago}
                           onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           <td style={s.td2}>{p.numero_pago}</td>
-                          <td style={s.td2}>{fmt.date(p.fecha_vencimiento)}</td>
-                          <td style={{ ...s.td2, fontWeight: 600, color: '#2b6cb0' }}>
+                          <td style={{ ...s.td2, whiteSpace: 'nowrap' }}>{fmt.date(p.fecha_vencimiento)}</td>
+                          <td style={{ ...s.td2, fontWeight: 600, color: '#2b6cb0', whiteSpace: 'nowrap' }}>
                             {fmt.money(p.monto_esperado)}
                           </td>
                           <td style={{
-                            ...s.td2, fontWeight: 600,
+                            ...s.td2, fontWeight: 600, whiteSpace: 'nowrap',
                             color: p.saldo_restante > 0 ? '#e53e3e' : '#38a169',
                           }}>
                             {p.saldo_restante > 0 ? fmt.money(p.saldo_restante) : '✓ Liquidado'}
@@ -343,25 +350,29 @@ function RI({ label, value, highlight }) {
 }
 
 const s = {
-  wrap:        { padding: '32px 40px', fontFamily: "'Inter','Segoe UI',sans-serif" },
+  wrap:        { padding: '24px 20px', fontFamily: "'Inter','Segoe UI',sans-serif" },
   back:        { background: 'none', border: 'none', color: '#3182ce', fontSize: 14, cursor: 'pointer', padding: 0, marginBottom: 8 },
-  title:       { margin: '0 0 24px', fontSize: 24, fontWeight: 700, color: '#1a2035' },
-  layout:      { display: 'grid', gridTemplateColumns: '1fr 420px', gap: 24, alignItems: 'start' },
-  formCard:    { background: '#fff', borderRadius: 12, padding: '28px 32px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' },
+  title:       { margin: '0 0 24px', fontSize: 22, fontWeight: 700, color: '#1a2035' },
+  layout:      { display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' },
+  formCard:    { background: '#fff', borderRadius: 12, padding: '24px 28px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' },
   corridaCol:  { display: 'flex', flexDirection: 'column', gap: 16 },
   corridaEmpty:{ background: '#fff', borderRadius: 12, padding: 40, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', textAlign: 'center' },
-  corridaCard: { background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' },
-  corridaTitle:{ margin: '0 0 14px', fontSize: 15, fontWeight: 600, color: '#2d3748' },
+  corridaCard: { background: '#fff', borderRadius: 12, padding: '18px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' },
+  corridaTitle:{ margin: '0 0 12px', fontSize: 15, fontWeight: 600, color: '#2d3748' },
   twoCol:      { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
   input:       { width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit' },
   label:       { display: 'block', fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 4 },
   errMsg:      { color: '#e53e3e', fontSize: 12, marginTop: 2 },
   checkRow:    { display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '10px 14px', background: '#f7fafc', borderRadius: 8, border: '1px solid #e2e8f0' },
-  moratorioNote:{ background: '#fffaf0', border: '1px solid #f6e05e', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#744210' },
+  radioRow:    { display: 'flex', alignItems: 'flex-start', padding: '12px 14px', background: '#f7fafc', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer' },
+  radioTitle:  { fontSize: 14, fontWeight: 600, color: '#2d3748' },
+  radioDesc:   { fontSize: 12, color: '#718096', marginTop: 2, lineHeight: 1.4 },
+  infoNote:    { background: '#fffaf0', border: '1px solid #f6e05e', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#744210' },
+  hint:        { margin: '0 0 12px', fontSize: 13, color: '#718096' },
   formActions: { display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 8, borderTop: '1px solid #f0f0f0', marginTop: 8 },
   btnPri:      { padding: '10px 20px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   btnSec:      { padding: '10px 20px', background: '#fff', color: '#4a5568', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, cursor: 'pointer' },
   table:       { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
-  th:          { padding: '8px 10px', textAlign: 'left', color: '#718096', fontWeight: 600, fontSize: 12, borderBottom: '2px solid #f0f0f0', background: '#fafafa', position: 'sticky', top: 0, whiteSpace: 'nowrap' },
-  td2:         { padding: '8px 10px', borderBottom: '1px solid #f7f7f7', color: '#2d3748', whiteSpace: 'nowrap' },
+  th:          { padding: '8px 10px', textAlign: 'left', color: '#718096', fontWeight: 600, fontSize: 12, borderBottom: '2px solid #f0f0f0', background: '#fafafa', position: 'sticky', top: 0 },
+  td2:         { padding: '8px 10px', borderBottom: '1px solid #f7f7f7', color: '#2d3748' },
 };
