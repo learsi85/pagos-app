@@ -37,6 +37,9 @@ export const authAdmin = {
   login:  (data) => api.post('/auth/admin/login', data),
   me:     ()     => api.get('/auth/admin/me'),
   logout: ()     => api.post('/auth/admin/logout'),
+  solicitarReset: (data)   => api.post('/auth/admin/solicitar-reset', data),
+  confirmarReset: (data)   => api.post('/auth/admin/confirmar-reset', data),
+  validarToken:   (params) => api.get('/auth/admin/validar-token', { params }),
 };
 
 // ── Auth Cliente ──────────────────────────────────────────────

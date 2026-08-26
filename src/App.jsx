@@ -6,6 +6,8 @@ import AdminLayout       from '@/components/layout/AdminLayout';
 import PortalLayout      from '@/components/layout/PortalLayout';
 
 import LoginAdmin            from '@/pages/admin/LoginAdmin';
+import SolicitarResetAdmin   from '@/pages/admin/SolicitarResetAdmin';
+import ResetPasswordAdmin    from '@/pages/admin/ResetPasswordAdmin';
 import Dashboard             from '@/pages/admin/Dashboard';
 import Clientes              from '@/pages/admin/Clientes';
 import ClienteDetalle        from '@/pages/admin/ClienteDetalle';
@@ -44,6 +46,8 @@ export default function App() {
       <Routes>
         {/* Admin */}
         <Route path="/login" element={<LoginAdmin />} />
+        <Route path="/solicitar-reset" element={<SolicitarResetAdmin />} />
+        <Route path="/reset-password" element={<ResetPasswordAdmin />} />
         <Route path="/" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard"                        element={<Dashboard />} />

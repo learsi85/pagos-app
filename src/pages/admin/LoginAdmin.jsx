@@ -47,6 +47,7 @@ export default function LoginAdmin() {
             {loading?'Iniciando sesión…':'Iniciar sesión'}
           </button>
         </form>
+        <p style={{textAlign:'center',marginTop:12,fontSize:13}}><a href="/solicitar-reset" style={{color:'#3182ce'}}>¿Olvidaste tu contraseña?</a></p>
         <p style={{textAlign:'center',marginTop:20,fontSize:13,color:'#718096'}}>¿Eres cliente? <a href="/portal/login" style={{color:'#3182ce'}}>Accede a tu portal</a></p>
       </div>
     </div>
