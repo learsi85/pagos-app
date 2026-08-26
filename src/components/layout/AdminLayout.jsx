@@ -29,7 +29,6 @@ export default function AdminLayout() {
         .adm-sidebar{position:fixed!important;top:0;left:0;bottom:0;transform:translateX(-100%);box-shadow:4px 0 24px rgba(0,0,0,.2)}
         .adm-sidebar.open{transform:translateX(0)}
         .adm-close{display:block!important}
-        .adm-overlay{display:block!important}
         .adm-main{padding-top:56px}
       }`;
     document.head.appendChild(s);
@@ -50,8 +49,11 @@ export default function AdminLayout() {
       </header>
 
       {/* Overlay */}
-      <div className="adm-overlay" style={{display:'none',position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:40}} onClick={()=>setOpen(false)}/>
-
+      <div
+        className="adm-overlay"
+        style={{display: open ? 'block' : 'none', position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:40}}
+        onClick={() => setOpen(false)}
+      />
       {/* Sidebar */}
       <aside className={`adm-sidebar${open?' open':''}`} style={{width:240,minHeight:'100vh',background:'#1a2035',display:'flex',flexDirection:'column',position:'sticky',top:0,height:'100vh',flexShrink:0,transition:'transform .25s ease',zIndex:45}}>
         <div style={{display:'flex',alignItems:'center',gap:10,padding:'24px 20px 20px',borderBottom:'1px solid rgba(255,255,255,.08)'}}>
