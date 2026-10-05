@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { financiamientosApi, pagosApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
+import { descargarPdf } from '@/utils/downloadBlob';
 const uploadsBase = import.meta.env.VITE_UPLOADS_BASE_URL || '/uploads';
 
 export default function FinanciamientoDetalle() {
@@ -54,6 +55,12 @@ export default function FinanciamientoDetalle() {
           <h1 style={s.title}>Financiamiento #{fin.FinanciamientoId} — {fin.NombreProducto}</h1>
           {statusBadge(fin.Status)}
         </div>
+        <button 
+          onClick={() => descargarPdf(() => financiamientosApi.estadoCuentaPdf(id), `estado-cuenta-${id}.pdf`).catch(() => toast.error('No se pudo generar el PDF'))}
+          style={{ padding: '8px 16px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          📄 Descargar estado de cuenta
+        </button>
         <p style={s.sub}>
           Cliente:{' '}
           <button style={s.clienteLink} onClick={() => navigate(`/clientes/${fin.ClienteId}`)}>

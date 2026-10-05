@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { portalApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
+import toast from 'react-hot-toast';
+import { descargarPdf } from '@/utils/downloadBlob';
 
 export default function DetalleFinanciamiento() {
   const { id }  = useParams();
@@ -27,9 +29,17 @@ export default function DetalleFinanciamiento() {
     <div style={{ fontFamily: "'Inter','Segoe UI',sans-serif" }}>
       <button style={s.back} onClick={() => navigate('/portal/financiamientos')}>← Mis financiamientos</button>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1a2035' }}>{fin.NombreProducto}</h1>
-        {statusBadge(fin.Status)}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1a2035' }}>{fin.NombreProducto}</h1>
+          {statusBadge(fin.Status)}
+        </div>
+        <button
+          onClick={() => descargarPdf(() => portalApi.estadoCuentaPdf(id), `estado-cuenta-${id}.pdf`).catch(() => toast.error('No se pudo generar el PDF'))}
+          style={{ padding: '8px 16px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          📄 Descargar estado de cuenta
+        </button>
       </div>
       <p style={{ color: '#718096', fontSize: 13, margin: '0 0 20px' }}>{fin.Empresa}</p>
 

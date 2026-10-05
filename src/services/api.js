@@ -85,7 +85,7 @@ export const financiamientosApi = {
   simular: (data)              => api.post('/admin/financiamientos/simular', data),
   pagos:   (id)                => api.get(`/admin/financiamientos/${id}/pagos`),
   cargos:  (id)                => api.get(`/admin/financiamientos/${id}/cargos`),
-
+  estadoCuentaPdf: (id) => api.get(`/admin/financiamientos/${id}/estado-cuenta/pdf`, { responseType: 'blob' }),
   // CORRECCIÓN: pasa fecha_pago como query param para calcular días reales de atraso
   calcularMoratorio: (finId, planId, params = {}) =>
     api.get(`/admin/financiamientos/${finId}/moratorio/${planId}`, { params }),
@@ -126,6 +126,7 @@ export const portalApi = {
   plan:            (id) => api.get(`/cliente/financiamientos/${id}/plan`),
   pagos:           (id) => api.get(`/cliente/financiamientos/${id}/pagos`),
   estadoCuenta:    ()   => api.get('/cliente/estado-cuenta'),
+  estadoCuentaPdf: (id) => api.get(`/cliente/financiamientos/${id}/estado-cuenta/pdf`, { responseType: 'blob' }),
 };
 
 export default api;
