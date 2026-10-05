@@ -51,16 +51,20 @@ export default function FinanciamientoDetalle() {
       {/* Header */}
       <div style={s.header}>
         <button style={s.back} onClick={() => navigate('/financiamientos')}>← Financiamientos</button>
-        <div style={s.titleRow}>
-          <h1 style={s.title}>Financiamiento #{fin.FinanciamientoId} — {fin.NombreProducto}</h1>
-          {statusBadge(fin.Status)}
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={s.titleRow}>
+            <h1 style={s.title}>Financiamiento #{fin.FinanciamientoId} — {fin.NombreProducto}</h1>
+            {statusBadge(fin.Status)}
+          </div>
+          <button
+            onClick={() => descargarPdf(() => financiamientosApi.estadoCuentaPdf(id), `estado-cuenta-${id}.pdf`).catch(() => toast.error('No se pudo generar el PDF'))}
+            style={{ padding: '8px 16px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            📄 Descargar estado de cuenta
+          </button>
         </div>
-        <button 
-          onClick={() => descargarPdf(() => financiamientosApi.estadoCuentaPdf(id), `estado-cuenta-${id}.pdf`).catch(() => toast.error('No se pudo generar el PDF'))}
-          style={{ padding: '8px 16px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          📄 Descargar estado de cuenta
-        </button>
+
         <p style={s.sub}>
           Cliente:{' '}
           <button style={s.clienteLink} onClick={() => navigate(`/clientes/${fin.ClienteId}`)}>
