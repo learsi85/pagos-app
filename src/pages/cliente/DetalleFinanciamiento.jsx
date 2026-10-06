@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { portalApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
 import toast from 'react-hot-toast';
-import { descargarPdf } from '@/utils/downloadBlob';
+import { descargarPdf, descargarExcel } from '@/utils/downloadBlob';
 
 export default function DetalleFinanciamiento() {
   const { id }  = useParams();
@@ -34,12 +34,20 @@ export default function DetalleFinanciamiento() {
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1a2035' }}>{fin.NombreProducto}</h1>
           {statusBadge(fin.Status)}
         </div>
-        <button
-          onClick={() => descargarPdf(() => portalApi.estadoCuentaPdf(id), `estado-cuenta-${id}.pdf`).catch(() => toast.error('No se pudo generar el PDF'))}
-          style={{ padding: '8px 16px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          📄 Descargar estado de cuenta
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => descargarPdf(() => portalApi.estadoCuentaPdf(id), `estado-cuenta-${id}.pdf`).catch(() => toast.error('No se pudo generar el PDF'))}
+            style={{ padding: '8px 16px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            📄 PDF
+          </button>
+          <button
+            onClick={() => descargarExcel(() => portalApi.estadoCuentaExcel(id), `estado-cuenta-${id}.xlsx`).catch(() => toast.error('No se pudo generar el Excel'))}
+            style={{ padding: '8px 16px', background: '#216e39', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            📊 Excel
+          </button>
+        </div>
       </div>
       <p style={{ color: '#718096', fontSize: 13, margin: '0 0 20px' }}>{fin.Empresa}</p>
 

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import toast from 'react-hot-toast';
 import { clientesApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
+import { descargarExcel } from '@/utils/downloadBlob';
 
 const schema = z.object({
   Nombre:          z.string().min(1,'Requerido'),
@@ -39,7 +40,15 @@ export default function Clientes() {
     <div style={s.wrap}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <h1 style={{margin:0,fontSize:22,fontWeight:700,color:'#1a2035'}}>Clientes</h1>
-        <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onClick={()=>{setModal(true);setTokenInfo(null);}}>+ Nuevo cliente</button>
+        <div style={{display:'flex',gap:8}}>
+          <button
+            onClick={() => descargarExcel(() => clientesApi.exportExcel(q ? {q} : {}), 'clientes.xlsx').catch(() => toast.error('No se pudo generar el Excel'))}
+            style={{padding:'10px 18px',background:'#216e39',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}}
+          >
+            📊 Exportar
+          </button>
+          <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onClick={()=>{setModal(true);setTokenInfo(null);}}>+ Nuevo cliente</button>
+        </div>
       </div>
       <form onSubmit={(e)=>{e.preventDefault();load(q);}} style={{display:'flex',gap:8,marginBottom:16}}>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar por nombre, email o RFC…" style={{flex:1,...s.input,minWidth:0}} />

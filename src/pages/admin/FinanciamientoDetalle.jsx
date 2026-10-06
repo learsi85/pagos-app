@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { financiamientosApi, pagosApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
-import { descargarPdf } from '@/utils/downloadBlob';
+import { descargarPdf, descargarExcel } from '@/utils/downloadBlob';
 const uploadsBase = import.meta.env.VITE_UPLOADS_BASE_URL || '/uploads';
 
 export default function FinanciamientoDetalle() {
@@ -57,12 +57,20 @@ export default function FinanciamientoDetalle() {
             <h1 style={s.title}>Financiamiento #{fin.FinanciamientoId} — {fin.NombreProducto}</h1>
             {statusBadge(fin.Status)}
           </div>
-          <button
-            onClick={() => descargarPdf(() => financiamientosApi.estadoCuentaPdf(id), `estado-cuenta-${id}.pdf`).catch(() => toast.error('No se pudo generar el PDF'))}
-            style={{ padding: '8px 16px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            📄 Descargar estado de cuenta
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={() => descargarPdf(() => financiamientosApi.estadoCuentaPdf(id), `estado-cuenta-${id}.pdf`).catch(() => toast.error('No se pudo generar el PDF'))}
+              style={{ padding: '8px 16px', background: '#1a2035', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              📄 PDF
+            </button>
+            <button
+              onClick={() => descargarExcel(() => financiamientosApi.estadoCuentaExcel(id), `estado-cuenta-${id}.xlsx`).catch(() => toast.error('No se pudo generar el Excel'))}
+              style={{ padding: '8px 16px', background: '#216e39', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              📊 Excel
+            </button>
+          </div>
         </div>
 
         <p style={s.sub}>
@@ -192,6 +200,16 @@ export default function FinanciamientoDetalle() {
       {/* ── Tab: Historial de pagos (con moratorio) ── */}
       {tab === 'pagos' && (
         <div style={s.tableCard}>
+          {pagos.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px 0' }}>
+              <button
+                onClick={() => descargarExcel(() => pagosApi.exportByFinanciamiento(id), `pagos-financiamiento-${id}.xlsx`).catch(() => toast.error('No se pudo generar el Excel'))}
+                style={{ padding: '6px 14px', background: '#216e39', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                📊 Exportar Excel
+              </button>
+            </div>
+          )}
           {pagos.length === 0 ? (
             <p style={{ padding: 32, textAlign: 'center', color: '#718096', margin: 0 }}>
               Sin pagos registrados

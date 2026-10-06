@@ -64,6 +64,7 @@ export const clientesApi = {
   create: (data)     => api.post('/admin/clientes', data),
   get:    (id)       => api.get(`/admin/clientes/${id}`),
   update: (id, data) => api.put(`/admin/clientes/${id}`, data),
+  exportExcel: (params) => api.get('/admin/clientes/export', { params, responseType: 'blob' }),
 };
 
 // ── Productos ─────────────────────────────────────────────────
@@ -73,6 +74,7 @@ export const productosApi = {
   get:    (id)       => api.get(`/admin/productos/${id}`),
   update: (id, data) => api.put(`/admin/productos/${id}`, data),
   delete: (id)       => api.delete(`/admin/productos/${id}`),
+  exportExcel: ()    => api.get('/admin/productos/export', { responseType: 'blob' }),
 };
 
 // ── Financiamientos ───────────────────────────────────────────
@@ -85,7 +87,9 @@ export const financiamientosApi = {
   simular: (data)              => api.post('/admin/financiamientos/simular', data),
   pagos:   (id)                => api.get(`/admin/financiamientos/${id}/pagos`),
   cargos:  (id)                => api.get(`/admin/financiamientos/${id}/cargos`),
-  estadoCuentaPdf: (id) => api.get(`/admin/financiamientos/${id}/estado-cuenta/pdf`, { responseType: 'blob' }),
+  estadoCuentaPdf:   (id)      => api.get(`/admin/financiamientos/${id}/estado-cuenta/pdf`, { responseType: 'blob' }),
+  estadoCuentaExcel: (id)      => api.get(`/admin/financiamientos/${id}/estado-cuenta/excel`, { responseType: 'blob' }),
+  exportExcel:       (params)  => api.get('/admin/financiamientos/export', { params, responseType: 'blob' }),
   // CORRECCIÓN: pasa fecha_pago como query param para calcular días reales de atraso
   calcularMoratorio: (finId, planId, params = {}) =>
     api.get(`/admin/financiamientos/${finId}/moratorio/${planId}`, { params }),
@@ -95,7 +99,6 @@ export const financiamientosApi = {
 export const pagosApi = {
   list: (params) => api.get('/admin/pagos', { params }),
   get:  (id)     => api.get(`/admin/pagos/${id}`),
-
   // multipart/form-data para soportar comprobante adjunto
   create: (data) => {
     const form = new FormData();
@@ -106,6 +109,7 @@ export const pagosApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  exportByFinanciamiento: (finId) => api.get(`/admin/financiamientos/${finId}/pagos/export`, { responseType: 'blob' }),
 };
 
 // ── Métodos de pago ───────────────────────────────────────────
@@ -126,7 +130,8 @@ export const portalApi = {
   plan:            (id) => api.get(`/cliente/financiamientos/${id}/plan`),
   pagos:           (id) => api.get(`/cliente/financiamientos/${id}/pagos`),
   estadoCuenta:    ()   => api.get('/cliente/estado-cuenta'),
-  estadoCuentaPdf: (id) => api.get(`/cliente/financiamientos/${id}/estado-cuenta/pdf`, { responseType: 'blob' }),
+  estadoCuentaPdf:   (id) => api.get(`/cliente/financiamientos/${id}/estado-cuenta/pdf`, { responseType: 'blob' }),
+  estadoCuentaExcel: (id) => api.get(`/cliente/financiamientos/${id}/estado-cuenta/excel`, { responseType: 'blob' }),
 };
 
 export default api;

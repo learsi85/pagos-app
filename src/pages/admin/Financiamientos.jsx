@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { financiamientosApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
+import toast from 'react-hot-toast';
+import { descargarExcel } from '@/utils/downloadBlob';
 
 const STATUSES=[{value:'',label:'Todos'},{value:'ACTIVO',label:'Activo'},{value:'LIQUIDADO',label:'Liquidado'},{value:'VENCIDO',label:'Vencido'},{value:'CANCELADO',label:'Cancelado'}];
 
@@ -16,9 +18,17 @@ export default function Financiamientos() {
 
   return (
     <div style={{padding:'24px 20px',fontFamily:"'Inter','Segoe UI',sans-serif"}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <h1 style={{margin:0,fontSize:22,fontWeight:700,color:'#1a2035'}}>Financiamientos</h1>
-        <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}} onClick={()=>navigate('/financiamientos/nuevo')}>+ Nuevo</button>
+        <div style={{display:'flex',gap:8}}>
+          <button
+            onClick={() => descargarExcel(() => financiamientosApi.exportExcel(status ? {status} : {}), 'financiamientos.xlsx').catch(() => toast.error('No se pudo generar el Excel'))}
+            style={{padding:'10px 18px',background:'#216e39',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}
+          >
+            📊 Exportar
+          </button>
+          <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}} onClick={()=>navigate('/financiamientos/nuevo')}>+ Nuevo</button>
+        </div>
       </div>
 
       <div style={{display:'flex',gap:6,marginBottom:16,overflowX:'auto',paddingBottom:4,WebkitOverflowScrolling:'touch'}}>

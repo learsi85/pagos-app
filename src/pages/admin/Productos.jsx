@@ -5,6 +5,8 @@ import { z } from 'zod';
 import toast from 'react-hot-toast';
 import { productosApi } from '@/services/api';
 import { fmt } from '@/utils/format';
+import { descargarPdf, descargarExcel } from '@/utils/downloadBlob';
+import { pagosApi } from '@/services/api'; // si no está ya importado
 
 const schema=z.object({Nombre:z.string().min(1,'Requerido'),Descripcion:z.string().optional(),PrecioBase:z.coerce.number().positive('Debe ser mayor a 0')});
 
@@ -38,7 +40,15 @@ export default function Productos() {
     <div style={{padding:'24px 20px',fontFamily:"'Inter','Segoe UI',sans-serif"}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <h1 style={{margin:0,fontSize:22,fontWeight:700,color:'#1a2035'}}>Productos</h1>
-        <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onClick={openNew}>+ Nuevo producto</button>
+        <div style={{display:'flex',gap:8}}>
+          <button
+            onClick={() => descargarExcel(() => productosApi.exportExcel(), 'productos.xlsx').catch(() => toast.error('No se pudo generar el Excel'))}
+            style={{padding:'10px 18px',background:'#216e39',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}}
+          >
+            📊 Exportar
+          </button>
+          <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onClick={openNew}>+ Nuevo producto</button>
+        </div>
       </div>
       <div style={{background:'#fff',borderRadius:12,boxShadow:'0 1px 4px rgba(0,0,0,.07)',overflow:'hidden'}}>
         <div style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
