@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { financiamientosApi, pagosApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
 import { descargarPdf, descargarExcel } from '@/utils/downloadBlob';
+import toast from 'react-hot-toast';
 const uploadsBase = import.meta.env.VITE_UPLOADS_BASE_URL || '/uploads';
 
 export default function FinanciamientoDetalle() {
@@ -14,6 +15,24 @@ export default function FinanciamientoDetalle() {
   const [cargos,  setCargos]  = useState([]);
   const [tab,     setTab]     = useState('plan');
   const [loading, setLoading] = useState(true);
+  const [cancelando, setCancelando] = useState(null); // pago seleccionado para cancelar
+  const [motivo, setMotivo] = useState('');
+  const [cancelSaving, setCancelSaving] = useState(false);
+
+  const confirmarCancelacion = async () => {
+    if (motivo.trim().length < 5) { toast.error('Describe el motivo (mínimo 5 caracteres)'); return; }
+    setCancelSaving(true);
+    try {
+      await pagosApi.cancelar(cancelando.PagoId, { motivo });
+      toast.success('Pago cancelado');
+      setCancelando(null); setMotivo('');
+      load(); // recarga fin, plan, pagos, cargos
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al cancelar');
+    } finally {
+      setCancelSaving(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -219,40 +238,40 @@ export default function FinanciamientoDetalle() {
               <table style={s.table}>
                 <thead>
                   <tr>
-                    {['Fecha','Monto cobrado','Recargo mora','Método','Referencia','Comprobante'].map((h) => (
+                    {['Fecha','Monto cobrado','Recargo mora','Método','Referencia','Comprobante','Estatus',''].map((h) => (
                       <th key={h} style={s.th}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {pagos.map((p) => {
-                    const mora  = parseFloat(p.MoratorioAplicado || 0);
-                    //const total = parseFloat(p.Monto) + mora;
+                    const mora = parseFloat(p.MoratorioAplicado || 0);
+                    const cancelado = p.Status === 'CANCELADO';
                     return (
-                      <tr key={p.PagoId}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
+                      <tr key={p.PagoId} style={{ opacity: cancelado ? 0.5 : 1 }}>
                         <td style={{ ...s.td, whiteSpace: 'nowrap' }}>{fmt.date(p.FechaPago)}</td>
-                        <td style={{ ...s.td, fontWeight: 600, color: '#2b6cb0', whiteSpace: 'nowrap' }}>
+                        <td style={{ ...s.td, fontWeight: 600, color: '#2b6cb0', whiteSpace: 'nowrap', textDecoration: cancelado ? 'line-through' : 'none' }}>
                           {fmt.money(p.Monto)}
                         </td>
                         <td style={{ ...s.td, whiteSpace: 'nowrap' }}>
-                          {mora > 0
-                            ? <span style={{ color: '#e53e3e', fontWeight: 600 }}>{fmt.money(mora)}</span>
-                            : <span style={{ color: '#a0aec0' }}>—</span>
-                          }
+                          {mora > 0 ? <span style={{ color: '#e53e3e', fontWeight: 600 }}>{fmt.money(mora)}</span> : <span style={{ color: '#a0aec0' }}>—</span>}
                         </td>
                         <td style={{ ...s.td, whiteSpace: 'nowrap' }}>{p.MetodoPago}</td>
-                        <td style={{ ...s.td, color: '#718096', whiteSpace: 'nowrap' }}>
-                          {p.Referencia || '—'}
+                        <td style={{ ...s.td, color: '#718096', whiteSpace: 'nowrap' }}>{p.Referencia || '—'}</td>
+                        <td style={s.td}>
+                          {p.ComprobanteUrl ? <a href={`${uploadsBase}/${p.ComprobanteUrl}`} target="_blank" rel="noreferrer" style={{ color: '#3182ce', fontSize: 13 }}>Ver</a> : '—'}
                         </td>
                         <td style={s.td}>
-                          {p.ComprobanteUrl
-                            ? <a href={`${uploadsBase}/${p.ComprobanteUrl}`} target="_blank"
-                                rel="noreferrer" style={{ color: '#3182ce', fontSize: 13 }}>Ver</a>
-                            : '—'
-                          }
+                          {cancelado
+                            ? <span title={p.CanceladoMotivo} style={{ color: '#e53e3e', fontSize: 12, fontWeight: 600 }}>Cancelado</span>
+                            : <span style={{ color: '#38a169', fontSize: 12, fontWeight: 600 }}>Activo</span>}
+                        </td>
+                        <td style={s.td}>
+                          {!cancelado && (
+                            <button onClick={() => setCancelando(p)} style={{ background: 'none', border: 'none', color: '#e53e3e', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                              Cancelar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -321,6 +340,29 @@ export default function FinanciamientoDetalle() {
               </div>
             </>
           )}
+        </div>
+      )}
+      {cancelando && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+          onClick={(e) => e.target === e.currentTarget && setCancelando(null)}>
+          <div style={{ background:'#fff', borderRadius:12, padding:'24px', width:'100%', maxWidth:420 }}>
+            <h3 style={{ margin:'0 0 8px', fontSize:16, fontWeight:700, color:'#1a2035' }}>Cancelar pago</h3>
+            <p style={{ margin:'0 0 16px', fontSize:13, color:'#718096' }}>
+              Esto revertirá <strong>{fmt.money(cancelando.Monto)}</strong> aplicados el {fmt.date(cancelando.FechaPago)}.
+              El registro se conserva para auditoría.
+            </p>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#4a5568', marginBottom:4 }}>Motivo *</label>
+            <textarea value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej. Pago duplicado, comprobante inválido, error de captura…"
+              style={{ width:'100%', minHeight:70, padding:'9px 12px', border:'1px solid #e2e8f0', borderRadius:8, fontSize:13, boxSizing:'border-box', fontFamily:'inherit', resize:'vertical' }} />
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16 }}>
+              <button onClick={() => { setCancelando(null); setMotivo(''); }} style={{ padding:'9px 18px', background:'#fff', color:'#4a5568', border:'1px solid #e2e8f0', borderRadius:8, fontSize:13, cursor:'pointer' }}>
+                Volver
+              </button>
+              <button onClick={confirmarCancelacion} disabled={cancelSaving} style={{ padding:'9px 18px', background:'#e53e3e', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                {cancelSaving ? 'Cancelando…' : 'Confirmar cancelación'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </Wrap>

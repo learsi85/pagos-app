@@ -110,6 +110,7 @@ export const pagosApi = {
     });
   },
   exportByFinanciamiento: (finId) => api.get(`/admin/financiamientos/${finId}/pagos/export`, { responseType: 'blob' }),
+  cancelar: (id, data) => api.post(`/admin/pagos/${id}/cancelar`, data),
 };
 
 // ── Métodos de pago ───────────────────────────────────────────
