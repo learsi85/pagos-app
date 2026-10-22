@@ -18,3 +18,8 @@ export const useClienteStore = create(persist(
   {name:'cliente-auth',partialize:(s)=>({token:s.token,cliente:s.cliente,mustChange:s.mustChange})}
 ));
 useClienteStore.subscribe((s)=>s.token?localStorage.setItem('cliente_token',s.token):localStorage.removeItem('cliente_token'));
+const SIN_PERMISOS = [];
+export const useCan = () => {
+  const permisos = useAdminStore((s) => s.user?.permisos ?? SIN_PERMISOS);
+  return (...keys) => keys.some((k) => permisos.includes(k));
+};

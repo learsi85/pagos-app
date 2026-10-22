@@ -4,13 +4,14 @@ import { financiamientosApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
 import toast from 'react-hot-toast';
 import { descargarExcel } from '@/utils/downloadBlob';
+import { useCan } from '@/store/authStore';
 
 const STATUSES=[{value:'',label:'Todos'},{value:'ACTIVO',label:'Activo'},{value:'LIQUIDADO',label:'Liquidado'},{value:'VENCIDO',label:'Vencido'},{value:'CANCELADO',label:'Cancelado'}];
 
 export default function Financiamientos() {
   const navigate=useNavigate();
   const [fins,setFins]=useState([]);const [loading,setLoading]=useState(true);const [status,setStatus]=useState('');
-
+  const can = useCan();
   const load=async(s='')=>{setLoading(true);try{const r=await financiamientosApi.list(s?{status:s}:{});setFins(r.data);}finally{setLoading(false);}};
   useEffect(()=>{load(status);},[status]);
 
@@ -21,13 +22,15 @@ export default function Financiamientos() {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <h1 style={{margin:0,fontSize:22,fontWeight:700,color:'#1a2035'}}>Financiamientos</h1>
         <div style={{display:'flex',gap:8}}>
-          <button
-            onClick={() => descargarExcel(() => financiamientosApi.exportExcel(status ? {status} : {}), 'financiamientos.xlsx').catch(() => toast.error('No se pudo generar el Excel'))}
-            style={{padding:'10px 18px',background:'#216e39',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}
-          >
-            📊 Exportar
-          </button>
-          <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}} onClick={()=>navigate('/financiamientos/nuevo')}>+ Nuevo</button>
+          {can('financiamientos.exportar') && 
+            <button
+              onClick={() => descargarExcel(() => financiamientosApi.exportExcel(status ? {status} : {}), 'financiamientos.xlsx').catch(() => toast.error('No se pudo generar el Excel'))}
+              style={{padding:'10px 18px',background:'#216e39',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}
+            >
+              📊 Exportar
+            </button>
+          }
+          {can('financiamientos.crear') && <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}} onClick={()=>navigate('/financiamientos/nuevo')}>+ Nuevo</button>}
         </div>
       </div>
 
@@ -54,7 +57,7 @@ export default function Financiamientos() {
                     <td style={{...s.td,fontWeight:600,whiteSpace:'nowrap',color:+f.SaldoPendiente>0?'#e53e3e':'#38a169'}}>{fmt.money(f.SaldoPendiente)}</td>
                     <td style={{...s.td,whiteSpace:'nowrap'}}>{fmt.date(f.FechaVencimiento)}</td>
                     <td style={s.td}>{statusBadge(f.Status)}</td>
-                    <td style={s.td}><button style={{background:'none',border:'none',color:'#3182ce',fontSize:13,cursor:'pointer',fontWeight:600}} onClick={()=>navigate(`/financiamientos/${f.FinanciamientoId}`)}>Ver →</button></td>
+                    <td style={s.td}>{can('financiamientos.ver') && <button style={{background:'none',border:'none',color:'#3182ce',fontSize:13,cursor:'pointer',fontWeight:600}} onClick={()=>navigate(`/financiamientos/${f.FinanciamientoId}`)}>Ver →</button>}</td>
                   </tr>
                 ))}
               </tbody>

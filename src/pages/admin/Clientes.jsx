@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { clientesApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
 import { descargarExcel } from '@/utils/downloadBlob';
+import { useCan } from '@/store/authStore';
 
 const schema = z.object({
   Nombre:          z.string().min(1,'Requerido'),
@@ -23,6 +24,7 @@ export default function Clientes() {
   const [clientes,setClientes]=useState([]);const [loading,setLoading]=useState(true);
   const [q,setQ]=useState('');const [modal,setModal]=useState(false);const [saving,setSaving]=useState(false);const [tokenInfo,setTokenInfo]=useState(null);
   const {register,handleSubmit,reset,formState:{errors}}=useForm({resolver:zodResolver(schema)});
+  const can = useCan();
 
   const load=async(query='')=>{setLoading(true);try{const r=await clientesApi.list(query?{q:query}:{});setClientes(r.data);}finally{setLoading(false);}};
   useEffect(()=>{load();},[]);
@@ -41,13 +43,15 @@ export default function Clientes() {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <h1 style={{margin:0,fontSize:22,fontWeight:700,color:'#1a2035'}}>Clientes</h1>
         <div style={{display:'flex',gap:8}}>
-          <button
-            onClick={() => descargarExcel(() => clientesApi.exportExcel(q ? {q} : {}), 'clientes.xlsx').catch(() => toast.error('No se pudo generar el Excel'))}
-            style={{padding:'10px 18px',background:'#216e39',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}}
-          >
-            📊 Exportar
-          </button>
-          <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onClick={()=>{setModal(true);setTokenInfo(null);}}>+ Nuevo cliente</button>
+          {can('clientes.exportar') && 
+            <button
+              onClick={() => descargarExcel(() => clientesApi.exportExcel(q ? {q} : {}), 'clientes.xlsx').catch(() => toast.error('No se pudo generar el Excel'))}
+              style={{padding:'10px 18px',background:'#216e39',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}}
+            >
+              📊 Exportar
+            </button>
+          }
+          {can('clientes.crear') && <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onClick={()=>{setModal(true);setTokenInfo(null);}}>+ Nuevo cliente</button>}
         </div>
       </div>
       <form onSubmit={(e)=>{e.preventDefault();load(q);}} style={{display:'flex',gap:8,marginBottom:16}}>

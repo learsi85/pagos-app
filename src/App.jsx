@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { useAdminStore, useClienteStore } from '@/store/authStore';
+import { useAdminStore, useClienteStore, useCan } from '@/store/authStore';
 
 import AdminLayout       from '@/components/layout/AdminLayout';
 import PortalLayout      from '@/components/layout/PortalLayout';
@@ -28,8 +28,17 @@ import MisFinanciamientos  from '@/pages/cliente/MisFinanciamientos';
 import DetalleFinanciamiento from '@/pages/cliente/DetalleFinanciamiento';
 
 function RequireAdmin({ children }) {
-  const token = useAdminStore((s) => s.token);
-  return token ? children : <Navigate to="/login" replace />;
+  const { token, user } = useAdminStore();
+  // Sesiones anteriores al sistema de permisos vuelven a pasar por login
+  if (!token || !Array.isArray(user?.permisos)) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function RequirePermiso({ permiso, children }) {
+  const can = useCan();
+  return can(permiso)
+    ? children
+    : <p style={{ padding: 40, textAlign: 'center', color: '#718096' }}>No tienes permiso para ver esta pantalla</p>;
 }
 
 function RequireCliente({ children }) {
@@ -50,15 +59,15 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordAdmin />} />
         <Route path="/" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard"                        element={<Dashboard />} />
-          <Route path="clientes"                         element={<Clientes />} />
-          <Route path="clientes/:id"                     element={<ClienteDetalle />} />
-          <Route path="productos"                        element={<Productos />} />
-          <Route path="financiamientos"                  element={<Financiamientos />} />
-          <Route path="financiamientos/nuevo"            element={<FinanciamientoNuevo />} />
-          <Route path="financiamientos/:id"              element={<FinanciamientoDetalle />} />
-          <Route path="financiamientos/:id/pago"         element={<RegistrarPago />} />
-          <Route path="empresa"                          element={<Empresa />} />
+          <Route path="dashboard"                element={<RequirePermiso permiso="dashboard.ver"><Dashboard /></RequirePermiso>} />
+          <Route path="clientes"                 element={<RequirePermiso permiso="clientes.ver"><Clientes /></RequirePermiso>} />
+          <Route path="clientes/:id"             element={<RequirePermiso permiso="clientes.ver"><ClienteDetalle /></RequirePermiso>} />
+          <Route path="productos"                element={<RequirePermiso permiso="productos.ver"><Productos /></RequirePermiso>} />
+          <Route path="financiamientos"          element={<RequirePermiso permiso="financiamientos.ver"><Financiamientos /></RequirePermiso>} />
+          <Route path="financiamientos/nuevo"    element={<RequirePermiso permiso="financiamientos.crear"><FinanciamientoNuevo /></RequirePermiso>} />
+          <Route path="financiamientos/:id"      element={<RequirePermiso permiso="financiamientos.ver"><FinanciamientoDetalle /></RequirePermiso>} />
+          <Route path="financiamientos/:id/pago" element={<RequirePermiso permiso="pagos.registrar"><RegistrarPago /></RequirePermiso>} />
+          <Route path="empresa"                  element={<RequirePermiso permiso="empresa.editar"><Empresa /></RequirePermiso>} />
         </Route>
 
         {/* Portal cliente — rutas públicas */}

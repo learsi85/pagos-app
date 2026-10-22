@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { clientesApi, financiamientosApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
+import { useCan } from '@/store/authStore';
 
 export default function ClienteDetalle() {
   const { id }   = useParams();
@@ -13,6 +14,7 @@ export default function ClienteDetalle() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving,  setSaving]  = useState(false);
+  const can = useCan();
 
   const { register, handleSubmit, reset } = useForm();
 
@@ -45,7 +47,7 @@ export default function ClienteDetalle() {
       <div style={{background:'#fff',borderRadius:12,padding:'22px 26px',boxShadow:'0 1px 4px rgba(0,0,0,.07)',marginBottom:20}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
           <h2 style={{margin:0,fontSize:15,fontWeight:600,color:'#2d3748'}}>Datos generales</h2>
-          {!editing&&<button style={{padding:'8px 16px',background:'#fff',color:'#4a5568',border:'1px solid #e2e8f0',borderRadius:7,fontSize:13,cursor:'pointer'}} onClick={()=>setEditing(true)}>Editar</button>}
+          {can('clientes.editar') && !editing&&<button style={{padding:'8px 16px',background:'#fff',color:'#4a5568',border:'1px solid #e2e8f0',borderRadius:7,fontSize:13,cursor:'pointer'}} onClick={()=>setEditing(true)}>Editar</button>}
         </div>
         {editing?(
           <form onSubmit={handleSubmit(onSave)}>
@@ -76,7 +78,7 @@ export default function ClienteDetalle() {
       <div style={{background:'#fff',borderRadius:12,padding:'22px 26px',boxShadow:'0 1px 4px rgba(0,0,0,.07)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
           <h2 style={{margin:0,fontSize:15,fontWeight:600,color:'#2d3748'}}>Financiamientos ({fins.length})</h2>
-          <button style={{padding:'9px 18px',background:'#1a2035',color:'#fff',border:'none',borderRadius:7,fontSize:13,fontWeight:600,cursor:'pointer'}} onClick={()=>navigate(`/financiamientos/nuevo?cliente_id=${id}`)}>+ Nuevo financiamiento</button>
+          {can('financiamientos.crear') && <button style={{padding:'9px 18px',background:'#1a2035',color:'#fff',border:'none',borderRadius:7,fontSize:13,fontWeight:600,cursor:'pointer'}} onClick={()=>navigate(`/financiamientos/nuevo?cliente_id=${id}`)}>+ Nuevo financiamiento</button>}
         </div>
         {fins.length===0?<p style={{color:'#718096',fontSize:14}}>Sin financiamientos.</p>:(
           <div style={{overflowX:'auto'}}>

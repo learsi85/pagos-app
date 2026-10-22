@@ -7,11 +7,13 @@ import { productosApi } from '@/services/api';
 import { fmt } from '@/utils/format';
 import { descargarPdf, descargarExcel } from '@/utils/downloadBlob';
 import { pagosApi } from '@/services/api'; // si no está ya importado
+import { useCan } from '@/store/authStore';
 
 const schema=z.object({Nombre:z.string().min(1,'Requerido'),Descripcion:z.string().optional(),PrecioBase:z.coerce.number().positive('Debe ser mayor a 0')});
 
 export default function Productos() {
   const [productos,setProductos]=useState([]);const [loading,setLoading]=useState(true);const [modal,setModal]=useState(false);const [saving,setSaving]=useState(false);
+  const can = useCan();
   const {register,handleSubmit,reset,formState:{errors}}=useForm({resolver:zodResolver(schema)});
 
   const load=async()=>{setLoading(true);try{const r=await productosApi.list();setProductos(r.data);}finally{setLoading(false);}};
@@ -41,13 +43,17 @@ export default function Productos() {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <h1 style={{margin:0,fontSize:22,fontWeight:700,color:'#1a2035'}}>Productos</h1>
         <div style={{display:'flex',gap:8}}>
-          <button
-            onClick={() => descargarExcel(() => productosApi.exportExcel(), 'productos.xlsx').catch(() => toast.error('No se pudo generar el Excel'))}
-            style={{padding:'10px 18px',background:'#216e39',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}}
-          >
-            📊 Exportar
-          </button>
-          <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onClick={openNew}>+ Nuevo producto</button>
+          {can('productos.exportar') &&
+            <button
+              onClick={() => descargarExcel(() => productosApi.exportExcel(), 'productos.xlsx').catch(() => toast.error('No se pudo generar el Excel'))}
+              style={{padding:'10px 18px',background:'#216e39',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}}
+            >
+              📊 Exportar
+            </button>
+          }
+          {can('productos.crear') && 
+            <button style={{padding:'10px 20px',background:'#1a2035',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onClick={openNew}>+ Nuevo producto</button>
+          }
         </div>
       </div>
       <div style={{background:'#fff',borderRadius:12,boxShadow:'0 1px 4px rgba(0,0,0,.07)',overflow:'hidden'}}>
@@ -65,8 +71,8 @@ export default function Productos() {
                     <td style={{...s.td,whiteSpace:'nowrap'}}>{fmt.date(p.CreatedAt)}</td>
                     <td style={s.td}>
                       <div style={{display:'flex',gap:8}}>
-                        <button style={{background:'none',border:'none',color:'#3182ce',fontSize:13,cursor:'pointer',fontWeight:600,padding:0}} onClick={()=>openEdit(p)}>Editar</button>
-                        <button style={{background:'none',border:'none',color:p.IsActive?'#e53e3e':'#38a169',fontSize:13,cursor:'pointer',fontWeight:600,padding:0}} onClick={()=>toggle(p)}>{p.IsActive?'Desactivar':'Activar'}</button>
+                        {can('productos.editar') && <button style={{background:'none',border:'none',color:'#3182ce',fontSize:13,cursor:'pointer',fontWeight:600,padding:0}} onClick={()=>openEdit(p)}>Editar</button>}
+                        {can('productos.editar') && <button style={{background:'none',border:'none',color:p.IsActive?'#e53e3e':'#38a169',fontSize:13,cursor:'pointer',fontWeight:600,padding:0}} onClick={()=>toggle(p)}>{p.IsActive?'Desactivar':'Activar'}</button>}
                       </div>
                     </td>
                   </tr>

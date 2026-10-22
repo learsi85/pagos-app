@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useAdminStore } from '@/store/authStore';
+import { useAdminStore, useCan } from '@/store/authStore';
 import { authAdmin } from '@/services/api';
 import toast from 'react-hot-toast';
 
 const NAV = [
-  { to:'/dashboard',       icon:'⊞', label:'Dashboard' },
-  { to:'/clientes',        icon:'👤', label:'Clientes' },
-  { to:'/productos',       icon:'📦', label:'Productos' },
-  { to:'/financiamientos', icon:'📋', label:'Financiamientos' },
-  { to:'/empresa',         icon:'🏢', label:'Mi empresa' },
+  { to:'/dashboard',       icon:'⊞', label:'Dashboard',       permiso:'dashboard.ver' },
+  { to:'/clientes',        icon:'👤', label:'Clientes',        permiso:'clientes.ver' },
+  { to:'/productos',       icon:'📦', label:'Productos',       permiso:'productos.ver' },
+  { to:'/financiamientos', icon:'📋', label:'Financiamientos', permiso:'financiamientos.ver' },
+  { to:'/empresa',         icon:'🏢', label:'Mi empresa',      permiso:'empresa.editar' },
 ];
 
 export default function AdminLayout() {
@@ -17,6 +17,7 @@ export default function AdminLayout() {
   const navigate  = useNavigate();
   const location  = useLocation();
   const [open, setOpen] = useState(false);
+  const can = useCan();
 
   useEffect(() => { setOpen(false); }, [location.pathname]);
   useEffect(() => {
@@ -62,7 +63,7 @@ export default function AdminLayout() {
           <button className="adm-close" style={{display:'none',marginLeft:'auto',background:'none',border:'none',color:'rgba(255,255,255,.7)',fontSize:18,cursor:'pointer'}} onClick={()=>setOpen(false)}>✕</button>
         </div>
         <nav style={{flex:1,padding:'16px 12px',display:'flex',flexDirection:'column',gap:4,overflowY:'auto'}}>
-          {NAV.map(item=>(
+          {NAV.filter((i) => can(i.permiso)).map(item=>(
             <NavLink key={item.to} to={item.to} style={({isActive})=>({display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:8,color:isActive?'#63b3ed':'rgba(255,255,255,.6)',background:isActive?'rgba(99,179,237,.15)':'transparent',textDecoration:'none',fontSize:14,fontWeight:500,transition:'all .15s'})}>
               <span style={{fontSize:16,width:20,textAlign:'center'}}>{item.icon}</span>{item.label}
             </NavLink>
