@@ -17,6 +17,7 @@ import FinanciamientoNuevo   from '@/pages/admin/FinanciamientoNuevo';
 import FinanciamientoDetalle from '@/pages/admin/FinanciamientoDetalle';
 import RegistrarPago         from '@/pages/admin/RegistrarPago';
 import Empresa               from '@/pages/admin/Empresa';
+import SolicitudesPago from '@/pages/admin/SolicitudesPago';
 
 import LoginCliente        from '@/pages/cliente/LoginCliente';
 import PrimerAcceso        from '@/pages/cliente/PrimerAcceso';
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="financiamientos/:id"      element={<RequirePermiso permiso="financiamientos.ver"><FinanciamientoDetalle /></RequirePermiso>} />
           <Route path="financiamientos/:id/pago" element={<RequirePermiso permiso="pagos.registrar"><RegistrarPago /></RequirePermiso>} />
           <Route path="empresa"                  element={<RequirePermiso permiso="empresa.editar"><Empresa /></RequirePermiso>} />
+          <Route path="solicitudes-pago"         element={<RequirePermiso permiso="solicitudes_pago.ver"><SolicitudesPago /></RequirePermiso>} />
         </Route>
 
         {/* Portal cliente — rutas públicas */}

@@ -133,6 +133,20 @@ export const portalApi = {
   estadoCuenta:    ()   => api.get('/cliente/estado-cuenta'),
   estadoCuentaPdf:   (id) => api.get(`/cliente/financiamientos/${id}/estado-cuenta/pdf`, { responseType: 'blob' }),
   estadoCuentaExcel: (id) => api.get(`/cliente/financiamientos/${id}/estado-cuenta/excel`, { responseType: 'blob' }),
+  metodosPago:     ()   => api.get('/cliente/metodos-pago'),
+  solicitudesPago: (id) => api.get(`/cliente/financiamientos/${id}/solicitudes-pago`),
+  crearSolicitudPago: (id, data) => {
+    const form = new FormData();
+    Object.entries(data).forEach(([k, v]) => { if (v !== null && v !== undefined && v !== '') form.append(k, v); });
+    return api.post(`/cliente/financiamientos/${id}/solicitudes-pago`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+};
+
+// ── Solicitudes de pago ────────────────────────────────────────
+export const solicitudesPagoApi = {
+  list:     (params)   => api.get('/admin/solicitudes-pago', { params }),
+  get:      (id)       => api.get(`/admin/solicitudes-pago/${id}`),
+  rechazar: (id, data) => api.post(`/admin/solicitudes-pago/${id}/rechazar`, data),
 };
 
 export default api;

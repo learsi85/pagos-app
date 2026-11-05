@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { financiamientosApi, pagosApi, metodosApi } from '@/services/api';
+import { financiamientosApi, pagosApi, metodosApi, solicitudesPagoApi } from '@/services/api';
 import { fmt, statusBadge } from '@/utils/format';
+
+const uploadsBase = import.meta.env.VITE_UPLOADS_BASE_URL || '/uploads';
 
 const schema = z.object({
   metodo_pago_id:             z.coerce.number().positive('Selecciona un método'),
@@ -32,6 +34,9 @@ export default function RegistrarPago() {
   const [moratorio,   setMoratorio]   = useState(null);
   const [calMor,      setCalMor]      = useState(false);
   const [cuotaActual, setCuotaActual] = useState(null);
+  const [searchParams] = useSearchParams();
+  const solicitudId = searchParams.get('solicitud');
+  const [solicitud, setSolicitud] = useState(null);
 
   const { register, handleSubmit, setValue, watch } = useForm({
     resolver: zodResolver(schema),
@@ -42,6 +47,7 @@ export default function RegistrarPago() {
       monto_recibido:    0,
     },
   });
+  const moraInicial = useRef(true);
 
   const planPagoId    = watch('plan_pago_id');
   const fechaPago     = watch('fecha_pago');
@@ -54,16 +60,31 @@ export default function RegistrarPago() {
       financiamientosApi.get(id),
       financiamientosApi.plan(id),
       metodosApi.list(),
-    ]).then(([rf, rp, rm]) => {
+      solicitudId ? solicitudesPagoApi.get(solicitudId) : Promise.resolve(null),
+    ]).then(([rf, rp, rm, rs]) => {
       setFin(rf.data);
+      const sol = rs?.data;
+      const solValida = sol && sol.Status === 'PENDIENTE' && String(sol.FinanciamientoId) === String(id);
+      if (sol && !solValida) {
+        toast.error('Esta solicitud ya fue procesada o no corresponde a este financiamiento');
+        navigate('/solicitudes-pago');
+        return;
+      }
       const pendientes = rp.data.filter(p => ['PENDIENTE','PARCIAL','VENCIDO'].includes(p.Status));
       setPlan(pendientes);
       if (pendientes.length > 0) {
-        const primera = pendientes[0];
+        const primera = (solValida && sol.PlanPagoId && pendientes.find(p => String(p.PlanPagoId) === String(sol.PlanPagoId))) || pendientes[0];
         setCuotaActual(primera);
         setValue('plan_pago_id', String(primera.PlanPagoId));
-        // El monto recibido inicial = saldo de la cuota (sin mora aún)
         setValue('monto_recibido', Number(primera.SaldoPendiente));
+      }
+      if (solValida) {
+        setSolicitud(sol);
+        setValue('monto_recibido', Number(sol.Monto));
+        setValue('fecha_pago', String(sol.FechaPago).slice(0, 10));
+        setValue('metodo_pago_id', String(sol.MetodoPagoId));
+        setValue('referencia', sol.Referencia || '');
+        setValue('notas', sol.Notas || '');
       }
       setMetodos(rm.data);
     }).finally(() => setLoading(false));
@@ -82,10 +103,14 @@ export default function RegistrarPago() {
         setMoratorio(r.data);
         if (r.data.monto > 0) {
           setValue('monto_moratorio', r.data.monto);
+          // Solicitud de cliente: ya vio su pago con mora incluida → se cobra por defecto;
+          // el admin la desmarca para condonarla
+          if (solicitud && moraInicial.current) setValue('aplicar_moratorio', true);
         } else {
           setValue('monto_moratorio', 0);
           setValue('aplicar_moratorio', false);
         }
+        moraInicial.current = false;
       })
       .catch(() => setMoratorio(null))
       .finally(() => setCalMor(false));
@@ -93,7 +118,7 @@ export default function RegistrarPago() {
 
   // Cuando se activa/desactiva mora: ajustar monto_recibido sugerido
   useEffect(() => {
-    if (!cuotaActual) return;
+    if (!cuotaActual || solicitud) return;
     const saldo = parseFloat(cuotaActual.SaldoPendiente) || 0;
     const mora  = aplicarMor ? (parseFloat(montoMor) || 0) : 0;
     setValue('monto_recibido', round2(saldo + mora));
@@ -129,6 +154,8 @@ export default function RegistrarPago() {
         // Excedente
         excedente_destino_override: data.excedente_destino_override,
         comprobante:                archivo || undefined,
+
+        solicitud_id:               solicitudId || undefined,
       };
 
       const r = await pagosApi.create(payload);
@@ -164,6 +191,13 @@ export default function RegistrarPago() {
         ← Financiamiento #{id}
       </button>
       <h1 style={s.title}>Registrar pago</h1>
+      {solicitud && (
+        <div style={{ background:'#fffaf0', border:'1px solid #fbd38d', borderRadius:10, padding:'12px 16px', marginBottom:16, fontSize:13, color:'#744210' }}>
+          Autorizando la solicitud #{solicitud.SolicitudPagoId}, enviada el {fmt.date(solicitud.CreatedAt)} por <strong>{fmt.money(solicitud.Monto)}</strong>.{' '}
+          <a href={`${uploadsBase}/${solicitud.ComprobanteUrl}`} target="_blank" rel="noreferrer" style={{ color:'#3182ce', fontWeight:600 }}>Ver comprobante</a>.
+          {' '}Al registrar el pago, la solicitud queda aprobada. Si no procede, recházala desde "Pagos por autorizar". Si no adjuntas otro archivo, se usa el comprobante del cliente.
+        </div>
+      )}
 
       <div style={s.layout}>
         <div style={s.formCard}>
@@ -192,6 +226,12 @@ export default function RegistrarPago() {
               <Section title="Recargo por mora">
                 {calMor ? (
                   <p style={{ color: '#718096', fontSize: 13 }}>Calculando recargo…</p>
+                ) : moratorio?.mora_ya_cobrada ? (
+                  <div style={{ ...s.moratorioBox, background: '#ebf8ff', border: '1px solid #bee3f8' }}>
+                    <span style={{ fontSize: 13, color: '#2c5282' }}>
+                      ℹ La mora de esta cuota ya se cobró en un pago anterior — no se vuelve a cobrar
+                    </span>
+                  </div>
                 ) : moratorio && moratorio.dias_retraso > 0 ? (
                   <div style={s.moratorioBox}>
                     <div style={s.moratorioHeader}>
@@ -212,6 +252,11 @@ export default function RegistrarPago() {
                         <span style={{ fontSize: 13, fontWeight: 600, color: '#2d3748' }}>Cobrar recargo</span>
                       </label>
                     </div>
+                    {solicitud && !aplicarMor && (
+                      <p style={{ margin: '10px 0 0', fontSize: 12, color: '#744210' }}>
+                        Al no cobrar el recargo, lo que el cliente pagó de más se aplicará como excedente (siguiente cuota o abono a capital, según la configuración). Si prefieres, ajusta el monto recibido.
+                      </p>
+                    )}
                     {aplicarMor && (
                       <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #fbd38d' }}>
                         <F label="Monto del recargo (MXN)">

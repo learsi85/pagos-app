@@ -9,6 +9,7 @@ const NAV = [
   { to:'/clientes',        icon:'👤', label:'Clientes',        permiso:'clientes.ver' },
   { to:'/productos',       icon:'📦', label:'Productos',       permiso:'productos.ver' },
   { to:'/financiamientos', icon:'📋', label:'Financiamientos', permiso:'financiamientos.ver' },
+  { to:'/solicitudes-pago', icon:'🧾', label:'Pagos por autorizar', permiso:'solicitudes_pago.ver' },
   { to:'/empresa',         icon:'🏢', label:'Mi empresa',      permiso:'empresa.editar' },
 ];
 
